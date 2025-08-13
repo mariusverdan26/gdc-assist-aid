@@ -11,8 +11,11 @@ import {
   CheckCircle2,
   Ticket
 } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
 
 const Index = () => {
+  const { user } = useAuth();
+  
   return (
     <div className="min-h-screen bg-gradient-surface">
       {/* Header */}
@@ -28,12 +31,21 @@ const Index = () => {
                 <p className="text-sm text-muted-foreground">Secure Ticketing System</p>
               </div>
             </div>
-            <Link to="/app">
-              <Button className="gdc-gradient">
-                Access System
-                <ArrowRight className="h-4 w-4 ml-2" />
-              </Button>
-            </Link>
+            {user ? (
+              <Link to="/app">
+                <Button className="gdc-gradient">
+                  Access System
+                  <ArrowRight className="h-4 w-4 ml-2" />
+                </Button>
+              </Link>
+            ) : (
+              <Link to="/login">
+                <Button className="gdc-gradient">
+                  Sign In
+                  <ArrowRight className="h-4 w-4 ml-2" />
+                </Button>
+              </Link>
+            )}
           </div>
         </div>
       </header>
@@ -51,18 +63,37 @@ const Index = () => {
               Built for enterprise teams with SLA tracking and comprehensive analytics.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Link to="/app/new-ticket">
-                <Button size="lg" className="gdc-gradient">
-                  <Ticket className="h-5 w-5 mr-2" />
-                  Create Ticket
-                </Button>
-              </Link>
-              <Link to="/app/dashboard">
-                <Button size="lg" variant="outline">
-                  <BarChart3 className="h-5 w-5 mr-2" />
-                  View Dashboard
-                </Button>
-              </Link>
+              {user ? (
+                <>
+                  <Link to="/app/new-ticket">
+                    <Button size="lg" className="gdc-gradient">
+                      <Ticket className="h-5 w-5 mr-2" />
+                      Create Ticket
+                    </Button>
+                  </Link>
+                  <Link to="/app/dashboard">
+                    <Button size="lg" variant="outline">
+                      <BarChart3 className="h-5 w-5 mr-2" />
+                      View Dashboard
+                    </Button>
+                  </Link>
+                </>
+              ) : (
+                <>
+                  <Link to="/login">
+                    <Button size="lg" className="gdc-gradient">
+                      <Ticket className="h-5 w-5 mr-2" />
+                      Get Started
+                    </Button>
+                  </Link>
+                  <Link to="/login">
+                    <Button size="lg" variant="outline">
+                      <BarChart3 className="h-5 w-5 mr-2" />
+                      Sign In
+                    </Button>
+                  </Link>
+                </>
+              )}
             </div>
           </div>
         </div>
