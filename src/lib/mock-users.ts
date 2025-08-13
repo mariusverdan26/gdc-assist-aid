@@ -8,32 +8,25 @@ export interface MockUser {
 
 export const mockUsers: MockUser[] = [
   {
-    email: 'admin@gdc.com',
+    email: 'sarah.johnson@greenfield.com',
     password: 'admin123',
-    displayName: 'Admin User',
+    displayName: 'Sarah Johnson',
     role: 'admin',
-    uid: 'admin-001'
+    uid: 'admin1'
   },
   {
-    email: 'employee@gdc.com',
+    email: 'michael.chen@greenfield.com',
     password: 'employee123',
-    displayName: 'Employee User',
+    displayName: 'Michael Chen',
     role: 'employee',
-    uid: 'employee-001'
+    uid: 'emp1'
   },
   {
-    email: 'john.doe@gdc.com',
-    password: 'john123',
-    displayName: 'John Doe',
+    email: 'emily.rodriguez@greenfield.com',
+    password: 'emily123',
+    displayName: 'Emily Rodriguez',
     role: 'employee',
-    uid: 'employee-002'
-  },
-  {
-    email: 'jane.smith@gdc.com',
-    password: 'jane123',
-    displayName: 'Jane Smith',
-    role: 'admin',
-    uid: 'admin-002'
+    uid: 'emp2'
   }
 ];
 

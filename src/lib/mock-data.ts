@@ -135,11 +135,13 @@ export const mockEvents: TicketEvent[] = [
 ];
 
 // Current user context
-export const getCurrentUser = (): User => {
+export const getCurrentUser = (email: string): User | undefined => {
   // In a real app, this would come from auth context
-  return mockUsers[0]; // Return admin user for demo
+  const user = mockUsers.find(user => user.email === email);
+  return user;
 };
 
-export const getUserRole = (): 'admin' | 'employee' => {
-  return getCurrentUser().role;
+export const getUserRole = (email: string): 'admin' | 'employee' => {
+  const user = getCurrentUser(email);
+  return user?.role || 'employee';
 };

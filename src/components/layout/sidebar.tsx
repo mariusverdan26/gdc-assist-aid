@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { getUserRole } from "@/lib/mock-data";
+import { useAuth } from "@/contexts/AuthContext";
 
 const adminNavItems = [
   {
@@ -57,8 +58,10 @@ const employeeNavItems = [
 
 export function Sidebar() {
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const { user } = useAuth();
   const location = useLocation();
-  const userRole = getUserRole();
+  const userRole = getUserRole(user.email || '');
+  console.log(userRole);
   const navItems = userRole === 'admin' ? adminNavItems : employeeNavItems;
 
   return (
