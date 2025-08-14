@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,16 +12,69 @@ import {
 import { TicketCard } from "@/components/tickets/ticket-card";
 import { Badge } from "@/components/ui/badge";
 import { Search, Filter, Download, Plus, Eye } from "lucide-react";
-import { mockTickets } from "@/lib/mock-data";
-import { TicketStatus } from "@/types";
+import { Ticket, TicketStatus } from "@/types";
+import app from "@/lib/firebase";
+import { getFirestore, collection, onSnapshot, Timestamp, QueryDocumentSnapshot, DocumentData } from "firebase/firestore";
 
 export default function TicketsList() {
   const { status } = useParams<{ status: TicketStatus }>();
   const [searchTerm, setSearchTerm] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
+  const [tickets, setTickets] = useState<Ticket[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+
+  const mapDocToTicket = (doc: QueryDocumentSnapshot<DocumentData>): Ticket => {
+    const data = doc.data() as any;
+    const issue: string = data.issue || '';
+    const statusTitle: string = data.status || 'Pending';
+    const category = issue.startsWith('Hardware') ? 'hardware'
+      : issue.startsWith('Internet') ? 'internet'
+      : issue.startsWith('Software') ? 'software'
+      : 'erp';
+    const mappedStatus: TicketStatus = statusTitle.toLowerCase() as TicketStatus;
+    const createdAt: Date = (data.timestamp && typeof data.timestamp.toDate === 'function')
+      ? (data.timestamp as Timestamp).toDate()
+      : new Date();
+    const acknowledgedAt: Date | undefined = (data.acknowledgeTime && typeof data.acknowledgeTime.toDate === 'function')
+      ? (data.acknowledgeTime as Timestamp).toDate()
+      : undefined;
+    const assignedName: string | undefined = data.staffAssignedName || data.staffAssigned || '';
+
+    return {
+      id: doc.id,
+      ticketNo: `GDC-${data.ticket || ''}`,
+      createdBy: {
+        uid: data.createdBy?.uid || '',
+        name: data.userName || '',
+        employeeNo: data.employeeID || undefined,
+        location: data.location || undefined,
+      },
+      assignedTo: assignedName ? { uid: '', name: assignedName } : null,
+      category,
+      status: mappedStatus,
+      details: data.remarks || '',
+      remarks: data.remarks ? [data.remarks] : [],
+      createdAt,
+      acknowledgedAt,
+      resolvedAt: undefined,
+    };
+  };
+
+  useEffect(() => {
+    const db = getFirestore(app);
+    const ref = collection(db, 'tickets');
+    const unsub = onSnapshot(ref, (snapshot) => {
+      const items = snapshot.docs
+        .map((d) => mapDocToTicket(d))
+        .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+      setTickets(items);
+      setLoading(false);
+    }, () => setLoading(false));
+    return () => unsub();
+  }, []);
 
   // Filter tickets based on status from URL params
-  const filteredTickets = mockTickets.filter(ticket => {
+  const filteredTickets = tickets.filter(ticket => {
     const matchesStatus = status ? ticket.status === status : true;
     const matchesSearch = searchTerm === "" || 
       ticket.ticketNo.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -89,7 +142,7 @@ export default function TicketsList() {
             variant={status === 'pending' ? 'default' : 'outline'}
             className={status === 'pending' ? getStatusColor('pending') : ''}
           >
-            Pending ({mockTickets.filter(t => t.status === 'pending').length})
+            Pending ({tickets.filter(t => t.status === 'pending').length})
           </Badge>
         </Link>
         <Link to="/app/tickets/ongoing">
@@ -97,7 +150,7 @@ export default function TicketsList() {
             variant={status === 'ongoing' ? 'default' : 'outline'}
             className={status === 'ongoing' ? getStatusColor('ongoing') : ''}
           >
-            Ongoing ({mockTickets.filter(t => t.status === 'ongoing').length})
+            Ongoing ({tickets.filter(t => t.status === 'ongoing').length})
           </Badge>
         </Link>
         <Link to="/app/tickets/resolved">
@@ -105,7 +158,7 @@ export default function TicketsList() {
             variant={status === 'resolved' ? 'default' : 'outline'}
             className={status === 'resolved' ? getStatusColor('resolved') : ''}
           >
-            Resolved ({mockTickets.filter(t => t.status === 'resolved').length})
+            Resolved ({tickets.filter(t => t.status === 'resolved').length})
           </Badge>
         </Link>
       </div>

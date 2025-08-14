@@ -1,6 +1,7 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged, User } from 'firebase/auth';
 import { findMockUser, getMockUserByEmail, MockUser } from './mock-users';
+import { getFirestore, collection, query, where, getDocs } from 'firebase/firestore';
 
 // Your Firebase configuration
 // Replace these values with your actual Firebase project configuration
@@ -34,34 +35,40 @@ try {
 
 export { auth };
 
-// Authentication functions
-export const signInUser = async (email: string, password: string) => {
+export const signInUser = async (username: string, password: string) => {
   try {
-    console.log(`start: ${email} ${password}`)
-    // Check if we're using mock auth (when Firebase isn't properly configured)
-    console.log(`auth: ${!auth}`)
-    console.log(`auth.currentUser: ${auth?.currentUser}`)
-    // if (!auth || typeof auth.currentUser === null) {
-      // console.log(`in`)
-      // Mock authentication for development
-      const mockUser = findMockUser(email, password);
-      if (mockUser) {
-        console.log(`mockuser`)
-        return { 
-          user: { 
-            email: mockUser.email, 
-            displayName: mockUser.displayName,
-            uid: mockUser.uid,
-            role: mockUser.role
-          } as any, 
-          error: null 
-        };
-      // } else {
-      //   return { user: null, error: 'Invalid email or password' };
-      // }
+    // 1. Use static credentials to authenticate and store session
+    await signInWithEmailAndPassword(auth, "admin@greenfield.com.ph", "@ITmgr0123");
+
+    // 2. Fetch user from Firestore based on username and password
+    const db = getFirestore(app);
+    const usersRef = collection(db, 'users');
+    const q = query(
+      usersRef,
+      where('employeeID', '==', username),
+      where('password', '==', password)
+    );
+    const querySnapshot = await getDocs(q);
+
+    if (querySnapshot.empty) {
+      return { user: null, error: 'Invalid username or password' };
     }
-    const userCredential = await signInWithEmailAndPassword(auth, email, password);
-    return { user: userCredential.user, error: null };
+
+    // Assuming usernames are unique, get the first matching user
+    const userDoc = querySnapshot.docs[0];
+    const userData = userDoc.data();
+
+    // You may want to omit the password from the returned user object
+    const { password: _pw, ...userWithoutPassword } = userData;
+
+    console.log(`userData: ${JSON.stringify(userData,null,2)}`)
+    return {
+      user: {
+        ...userWithoutPassword,
+        uid: userDoc.id,
+      },
+      error: null
+    };
   } catch (error: any) {
     return { user: null, error: error.message };
   }

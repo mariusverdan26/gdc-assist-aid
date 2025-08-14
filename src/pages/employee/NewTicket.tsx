@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -23,9 +23,12 @@ import {
 } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { Plus, Upload, FileText, AlertCircle } from "lucide-react";
+import { Plus, FileText, AlertCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { getCurrentUser } from "@/lib/mock-data";
+import { useUser } from "@/contexts/UserContext";
+import app from "@/lib/firebase";
+import { getFirestore, collection, addDoc, serverTimestamp } from "firebase/firestore";
+import { useNavigate } from "react-router-dom";
 
 const ticketSchema = z.object({
   employeeNo: z.string().min(1, "Employee number is required"),
@@ -34,7 +37,9 @@ const ticketSchema = z.object({
   category: z.enum(["internet", "hardware", "software", "erp"], {
     required_error: "Please select an issue category",
   }),
-  details: z.string().min(10, "Please provide at least 10 characters describing the issue"),
+  details: z
+    .string()
+    .min(10, "Please provide at least 10 characters describing the issue"),
 });
 
 type TicketFormData = z.infer<typeof ticketSchema>;
@@ -42,47 +47,82 @@ type TicketFormData = z.infer<typeof ticketSchema>;
 export default function NewTicket() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
-  const currentUser = getCurrentUser();
+  const { user, loading } = useUser();
+  const navigate = useNavigate();
+  
 
   const form = useForm<TicketFormData>({
     resolver: zodResolver(ticketSchema),
     defaultValues: {
-      employeeNo: currentUser.employeeNo || "",
-      employeeName: currentUser.displayName,
-      location: currentUser.location || "",
+      employeeNo: "",
+      employeeName: "",
+      location: "",
       category: undefined,
       details: "",
     },
   });
 
-  const onSubmit = async (data: TicketFormData) => {
-    setIsSubmitting(true);
-    
-    try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      // Generate ticket number
-      const ticketNo = `GDC-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${String(Math.floor(Math.random() * 999) + 1).padStart(3, '0')}`;
-      
-      toast({
-        title: "Ticket Created Successfully!",
-        description: `Your ticket ${ticketNo} has been submitted and is pending review.`,
-      });
-
-      // Reset form
+  // Populate form once user is available
+  useEffect(() => {
+    if (user) {
       form.reset({
-        employeeNo: currentUser.employeeNo || "",
-        employeeName: currentUser.displayName,
-        location: currentUser.location || "",
+        employeeNo: user.employeeNo || "",
+        employeeName: user.name,
+        location: user.location || "",
         category: undefined,
         details: "",
       });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
 
+  const onSubmit = async (data: TicketFormData) => {
+    setIsSubmitting(true);
+
+    try {
+      // Generate 5-digit ticket string
+      const ticket = String(Math.floor(10000 + Math.random() * 90000));
+
+      // Map category to issue title
+      const issueTitle =
+        data.category === 'hardware' ? 'Hardware Issue' :
+        data.category === 'internet' ? 'Internet Issue' :
+        data.category === 'software' ? 'Software Issue' :
+        'ERP Issue';
+
+      // Save ticket to Firestore
+      const db = getFirestore(app);
+      const ticketsRef = collection(db, "tickets");
+      await addDoc(ticketsRef, {
+        acknowledgeTime: null,                // timestamp|null
+        acknowledged: false,                  // boolean
+        email: user.email,                    // string
+        employeeID: user.employeeNo || "",   // string
+        issue: issueTitle,                    // string (title)
+        location: user.location || "",       // string
+        remarks: data.details,                // string (description)
+        resolved: false,                      // boolean
+        staffAssigned: "",                   // string (empty until assignment)
+        staffAssignedName: "",               // string (empty until assignment)
+        status: "Pending",                   // string (Title Case)
+        ticket,                               // string (5-digit)
+        timeResolved: "N/A",                 // string
+        timestamp: serverTimestamp(),         // timestamp (creation time)
+        userName: user.name,                  // string
+      });
+
+      toast({
+        title: "Ticket Created Successfully!",
+        description: `Your ticket ${ticket} has been submitted and is pending review.`,
+      });
+
+      // Redirect to My Tickets
+      navigate('/app/my-tickets');
     } catch (error) {
       toast({
         title: "Error Creating Ticket",
-        description: "There was a problem submitting your ticket. Please try again.",
+        description:
+          "There was a problem submitting your ticket. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -92,15 +132,36 @@ export default function NewTicket() {
 
   const categoryDescriptions = {
     internet: "Network connectivity, Wi-Fi, internet access issues",
-    hardware: "Computer, printer, monitor, and other physical equipment problems",
-    software: "Application errors, software installation, and compatibility issues",
+    hardware:
+      "Computer, printer, monitor, and other physical equipment problems",
+    software:
+      "Application errors, software installation, and compatibility issues",
     erp: "Enterprise Resource Planning system issues and errors",
   };
+
+  if (loading || !user) {
+    return (
+      <div className="max-w-2xl mx-auto">
+        <Card className="gdc-card">
+          <CardHeader>
+            <CardTitle>Loading...</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-muted-foreground">
+              Preparing ticket form...
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-foreground">Create New Ticket</h1>
+        <h1 className="text-2xl font-bold text-foreground">
+          Create New Ticket
+        </h1>
         <p className="text-muted-foreground">
           Report an issue and our IT team will assist you promptly
         </p>
@@ -118,11 +179,14 @@ export default function NewTicket() {
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
               {/* Employee Information */}
               <div className="space-y-4">
-                <h3 className="text-sm font-medium text-foreground">Employee Details</h3>
+                <h3 className="text-sm font-medium text-foreground">
+                  Employee Details
+                </h3>
                 <Separator />
-                
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <FormField
+                    disabled={true}
                     control={form.control}
                     name="employeeNo"
                     render={({ field }) => (
@@ -137,6 +201,7 @@ export default function NewTicket() {
                   />
 
                   <FormField
+                    disabled={true}
                     control={form.control}
                     name="employeeName"
                     render={({ field }) => (
@@ -152,6 +217,7 @@ export default function NewTicket() {
                 </div>
 
                 <FormField
+                  disabled={true}
                   control={form.control}
                   name="location"
                   render={({ field }) => (
@@ -161,7 +227,8 @@ export default function NewTicket() {
                         <Input placeholder="Building A - Floor 2" {...field} />
                       </FormControl>
                       <FormDescription>
-                        Please specify your building and floor for faster assistance
+                        Please specify your building and floor for faster
+                        assistance
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
@@ -171,7 +238,9 @@ export default function NewTicket() {
 
               {/* Issue Information */}
               <div className="space-y-4">
-                <h3 className="text-sm font-medium text-foreground">Issue Details</h3>
+                <h3 className="text-sm font-medium text-foreground">
+                  Issue Details
+                </h3>
                 <Separator />
 
                 <FormField
@@ -180,7 +249,10 @@ export default function NewTicket() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Issue Category</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <Select
+                        onValueChange={field.onChange}
+                        defaultValue={field.value}
+                      >
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder="Select the type of issue" />
@@ -240,7 +312,8 @@ export default function NewTicket() {
                         />
                       </FormControl>
                       <FormDescription>
-                        The more details you provide, the faster we can resolve your issue
+                        The more details you provide, the faster we can resolve
+                        your issue
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
@@ -248,33 +321,19 @@ export default function NewTicket() {
                 />
               </div>
 
-              {/* Optional Attachment */}
-              <div className="space-y-4">
-                <h3 className="text-sm font-medium text-foreground">Additional Information</h3>
-                <Separator />
-                
-                <div className="border-2 border-dashed border-border rounded-lg p-6 text-center">
-                  <Upload className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
-                  <p className="text-sm text-muted-foreground mb-1">
-                    Attach screenshots or files (optional)
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    PNG, JPG, PDF up to 10MB
-                  </p>
-                  <Button variant="outline" size="sm" className="mt-2" type="button">
-                    Choose Files
-                  </Button>
-                </div>
-              </div>
+              
 
               {/* SLA Notice */}
               <div className="bg-accent-light rounded-lg p-4">
                 <div className="flex gap-3">
                   <AlertCircle className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
                   <div className="text-sm">
-                    <p className="font-medium text-foreground mb-1">Service Level Agreement</p>
+                    <p className="font-medium text-foreground mb-1">
+                      Service Level Agreement
+                    </p>
                     <p className="text-muted-foreground">
-                      Your ticket will be acknowledged within 30 minutes and resolved within 8 hours during business hours.
+                      Your ticket will be acknowledged within 30 minutes and
+                      resolved within 8 hours during business hours.
                     </p>
                   </div>
                 </div>
@@ -282,9 +341,9 @@ export default function NewTicket() {
 
               {/* Submit Button */}
               <div className="flex gap-4">
-                <Button 
-                  type="submit" 
-                  className="flex-1" 
+                <Button
+                  type="submit"
+                  className="flex-1"
                   disabled={isSubmitting}
                 >
                   {isSubmitting ? (
@@ -296,8 +355,8 @@ export default function NewTicket() {
                     </>
                   )}
                 </Button>
-                <Button 
-                  type="button" 
+                <Button
+                  type="button"
                   variant="outline"
                   onClick={() => form.reset()}
                   disabled={isSubmitting}

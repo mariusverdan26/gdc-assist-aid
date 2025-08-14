@@ -11,7 +11,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
 import { registerUser } from '@/lib/firebase';
-import { useAuth } from '@/contexts/AuthContext';
 
 const registerSchema = z.object({
   email: z.string().email('Please enter a valid email address'),
@@ -30,7 +29,6 @@ export default function Register() {
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { setUser } = useAuth();
 
   const form = useForm<RegisterFormData>({
     resolver: zodResolver(registerSchema),
@@ -54,8 +52,6 @@ export default function Register() {
           variant: 'destructive',
         });
       } else if (user) {
-        // Update the auth context with the user
-        setUser(user);
         toast({
           title: 'Registration Successful',
           description: 'Account created successfully! You can now sign in.',

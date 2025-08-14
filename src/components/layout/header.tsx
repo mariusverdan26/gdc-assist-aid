@@ -9,13 +9,12 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { useAuth } from "@/contexts/AuthContext";
-import { signOutUser } from "@/lib/firebase";
+import { useUser } from "@/contexts/UserContext";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 
 export function Header() {
-  const { user } = useAuth();
+  const { user, signOut } = useUser();
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -30,20 +29,12 @@ export function Header() {
 
   const handleLogout = async () => {
     try {
-      const { error } = await signOutUser();
-      if (error) {
-        toast({
-          title: 'Logout Failed',
-          description: error,
-          variant: 'destructive',
-        });
-      } else {
-        toast({
-          title: 'Logged Out',
-          description: 'You have been successfully logged out.',
-        });
-        navigate('/login');
-      }
+      await signOut();
+      toast({
+        title: 'Logged Out',
+        description: 'You have been successfully logged out.',
+      });
+      navigate('/login');
     } catch (error) {
       toast({
         title: 'Logout Failed',
@@ -73,9 +64,9 @@ export function Header() {
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="relative h-8 w-8 rounded-full">
               <Avatar className="h-8 w-8">
-                <AvatarImage src="/placeholder-avatar.jpg" alt={user?.displayName || 'User'} />
+                <AvatarImage src="/placeholder-avatar.jpg" alt={user?.name || 'User'} />
                 <AvatarFallback className="bg-primary text-primary-foreground text-xs">
-                  {getInitials(user?.displayName || user?.email?.split('@')[0] || 'User')}
+                  {getInitials(user?.name || user?.email?.split('@')[0] || 'User')}
                 </AvatarFallback>
               </Avatar>
             </Button>
@@ -83,12 +74,12 @@ export function Header() {
           <DropdownMenuContent className="w-56" align="end" forceMount>
             <DropdownMenuLabel className="font-normal">
               <div className="flex flex-col space-y-1">
-                <p className="text-sm font-medium leading-none">{user?.displayName || user?.email?.split('@')[0] || 'User'}</p>
+                <p className="text-sm font-medium leading-none">{user?.name || user?.email?.split('@')[0] || 'User'}</p>
                 <p className="text-xs leading-none text-muted-foreground">
                   {user?.email}
                 </p>
                 <p className="text-xs leading-none text-muted-foreground capitalize">
-                  {(user as any)?.role || 'User'}
+                  {user?.role || 'User'}
                 </p>
               </div>
             </DropdownMenuLabel>

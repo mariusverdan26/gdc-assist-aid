@@ -11,10 +11,10 @@ import {
   CheckCircle2,
   Ticket
 } from "lucide-react";
-import { useAuth } from "@/contexts/AuthContext";
+import { useUser } from "@/contexts/UserContext";
 
 const Index = () => {
-  const { user } = useAuth();
+  const { user } = useUser();
   
   return (
     <div className="min-h-screen bg-gradient-surface">

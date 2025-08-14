@@ -12,8 +12,7 @@ import {
   BarChart3
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { getUserRole } from "@/lib/mock-data";
-import { useAuth } from "@/contexts/AuthContext";
+import { useUser } from "@/contexts/UserContext";
 
 const adminNavItems = [
   {
@@ -45,39 +44,43 @@ const adminNavItems = [
 
 const employeeNavItems = [
   {
-    title: "New Ticket",
-    href: "/app/new-ticket",
-    icon: Plus,
-  },
-  {
     title: "My Tickets",
     href: "/app/my-tickets",
     icon: FileText,
+  },
+  {
+    title: "New Ticket",
+    href: "/app/new-ticket",
+    icon: Plus,
   },
 ];
 
 export function Sidebar() {
   const [isCollapsed, setIsCollapsed] = useState(false);
-  const { user } = useAuth();
+  const { user } = useUser();
+  console.log(`sidebarUser: ${JSON.stringify(user,null,2)}`)
   const location = useLocation();
-  const userRole = getUserRole(user.email || '');
-  console.log(userRole);
+  const userRole = user?.role || 'employee';
   const navItems = userRole === 'admin' ? adminNavItems : employeeNavItems;
 
   return (
     <div className={cn(
       "flex flex-col bg-sidebar text-sidebar-foreground border-r border-sidebar-border transition-all duration-300",
-      isCollapsed ? "w-16" : "w-64"
+      isCollapsed ? "w-16" : "w-100"
     )}>
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b border-sidebar-border">
         {!isCollapsed && (
           <div className="flex items-center space-x-2">
-            <div className="w-8 h-8 bg-sidebar-primary rounded-lg flex items-center justify-center">
-              <span className="text-sidebar-primary-foreground font-bold text-sm">GDC</span>
+            <div className="w-8 h-8 bg-sidebar-primary rounded-full flex items-center justify-center overflow-hidden">
+              <img
+                src="/images/gdc-logo.jpeg"
+                alt="GDC Logo"
+                className="object-cover w-8 h-8 rounded-full"
+              />
             </div>
             <div>
-              <h2 className="font-semibold text-sm">Greenfield Dev Corp</h2>
+              <h2 className="font-semibold text-sm">Greenfield Development Corporation</h2>
               <p className="text-xs text-sidebar-foreground/70">Ticketing System</p>
             </div>
           </div>

@@ -1,20 +1,83 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { TicketCard } from "@/components/tickets/ticket-card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Plus, Search, FileText } from "lucide-react";
 import { Link } from "react-router-dom";
-import { mockTickets, getCurrentUser } from "@/lib/mock-data";
-import { TicketStatus } from "@/types";
+import { Ticket, TicketStatus } from "@/types";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useUser } from "@/contexts/UserContext";
+import app from "@/lib/firebase";
+import { getFirestore, collection, query, where, onSnapshot, Timestamp, QueryDocumentSnapshot, DocumentData } from "firebase/firestore";
 
 export default function MyTickets() {
   const [activeTab, setActiveTab] = useState<TicketStatus | 'all'>('all');
   const [searchTerm, setSearchTerm] = useState("");
-  const currentUser = getCurrentUser();
+  const { user, loading } = useUser();
+  const [tickets, setTickets] = useState<Ticket[]>([]);
+  const [ticketsLoading, setTicketsLoading] = useState<boolean>(true);
 
-  // Filter tickets created by current user
-  const userTickets = mockTickets.filter(ticket => ticket.createdBy.uid === currentUser.uid);
+  // Map Firestore ticket doc to UI Ticket type
+  const mapDocToTicket = (doc: QueryDocumentSnapshot<DocumentData>): Ticket => {
+    const data = doc.data() as any;
+    const issue: string = data.issue || '';
+    const statusTitle: string = data.status || 'Pending';
+    const category = issue.startsWith('Hardware') ? 'hardware'
+      : issue.startsWith('Internet') ? 'internet'
+      : issue.startsWith('Software') ? 'software'
+      : 'erp';
+    const status: TicketStatus = statusTitle.toLowerCase() as TicketStatus;
+    const createdAt: Date = (data.timestamp && typeof data.timestamp.toDate === 'function')
+      ? (data.timestamp as Timestamp).toDate()
+      : new Date();
+    const assignedName: string | undefined = data.staffAssignedName || data.staffAssigned || '';
+
+    return {
+      id: doc.id,
+      ticketNo: `GDC-${data.ticket || ''}`,
+      createdBy: {
+        uid: user?.uid || '',
+        name: data.userName || '',
+        employeeNo: data.employeeID || undefined,
+        location: data.location || undefined,
+      },
+      assignedTo: assignedName ? { uid: '', name: assignedName } : null,
+      category,
+      status,
+      details: data.remarks || '',
+      remarks: data.remarks ? [data.remarks] : [],
+      createdAt,
+      acknowledgedAt: data.acknowledgeTime && typeof data.acknowledgeTime.toDate === 'function' ? (data.acknowledgeTime as Timestamp).toDate() : undefined,
+      resolvedAt: undefined,
+    };
+  };
+
+  // Fetch tickets for logged-in user from Firestore
+  useEffect(() => {
+    if (!user || !user.employeeNo) return;
+    setTicketsLoading(true);
+    const db = getFirestore(app);
+    const ticketsRef = collection(db, 'tickets');
+    const qEmp = query(ticketsRef, where('employeeID', '==', user.employeeNo));
+
+    const unsub = onSnapshot(qEmp, (snapshot) => {
+      const items = snapshot.docs
+        .map((d) => mapDocToTicket(d))
+        .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+      setTickets(items);
+      setTicketsLoading(false);
+    }, (err) => {
+      console.error('Failed to fetch tickets by employeeID:', err);
+      setTicketsLoading(false);
+    });
+
+    return () => unsub();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.employeeNo]);
+
+  // Tickets already filtered by current user via Firestore query
+  const userTickets = tickets;
 
   const filteredTickets = userTickets.filter(ticket => {
     const matchesStatus = activeTab === 'all' || ticket.status === activeTab;
@@ -55,6 +118,21 @@ export default function MyTickets() {
         return 'bg-muted text-muted-foreground border-border';
     }
   };
+
+  if (loading || !user) {
+    return (
+      <div className="max-w-2xl mx-auto">
+        <Card className="gdc-card">
+          <CardHeader>
+            <CardTitle>Loading...</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-muted-foreground">Preparing your tickets...</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

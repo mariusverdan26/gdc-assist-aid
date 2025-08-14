@@ -1,21 +1,33 @@
-import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-import { Eye, EyeOff, Loader2 } from 'lucide-react';
+import React, { useState } from "react";
+import { useNavigate, Link } from "react-router-dom";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { Eye, EyeOff, Loader2 } from "lucide-react";
 
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { useToast } from '@/hooks/use-toast';
-import { signInUser } from '@/lib/firebase';
-import { useAuth } from '@/contexts/AuthContext';
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { useToast } from "@/hooks/use-toast";
+import { useUser } from "@/contexts/UserContext";
 
 const loginSchema = z.object({
-  email: z.string().email('Please enter a valid email address'),
-  password: z.string().min(6, 'Password must be at least 6 characters'),
+  username: z.string().min(3, "Username must be at least 3 characters"),
+  password: z.string().min(6, "Password must be at least 6 characters"),
 });
 
 type LoginFormData = z.infer<typeof loginSchema>;
@@ -25,44 +37,47 @@ export default function Login() {
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { setUser } = useAuth();
+  const { signIn } = useUser();
 
   const form = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
-      email: '',
-      password: '',
+      username: "",
+      password: "",
     },
   });
 
   const onSubmit = async (data: LoginFormData) => {
     setIsLoading(true);
-    
+
     try {
-      const { user, error } = await signInUser(data.email, data.password);
-      console.log(`user: ${user}`)
-      console.log(`error: ${error}`)
-      
+      const { user, error } = await signIn(data.username, data.password);
+      console.log(`user: ${user}`);
+      console.log(`error: ${error}`);
+
       if (error) {
         toast({
-          title: 'Login Failed',
+          title: "Login Failed",
           description: error,
-          variant: 'destructive',
+          variant: "destructive",
         });
-      } else if (user) {
-        // Update the auth context with the user
-        setUser(user);
+        return;
+      }
+
+      if (user !== null) {
+        console.log(`pasok`)
         toast({
-          title: 'Login Successful',
-          description: 'Welcome back!',
+          title: "Login Successful",
+          description: "Welcome back!",
         });
-        navigate('/app/dashboard');
+        const destination = user.role === 'employee' ? '/app/my-tickets' : '/app/dashboard';
+        navigate(destination);
       }
     } catch (error) {
       toast({
-        title: 'Login Failed',
-        description: 'An unexpected error occurred. Please try again.',
-        variant: 'destructive',
+        title: "Login Failed",
+        description: "An unexpected error occurred. Please try again.",
+        variant: "destructive",
       });
     } finally {
       setIsLoading(false);
@@ -97,17 +112,20 @@ export default function Login() {
           </CardHeader>
           <CardContent>
             <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              <form
+                onSubmit={form.handleSubmit(onSubmit)}
+                className="space-y-4"
+              >
                 <FormField
                   control={form.control}
-                  name="email"
+                  name="username"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Email</FormLabel>
+                      <FormLabel>Username</FormLabel>
                       <FormControl>
                         <Input
-                          type="email"
-                          placeholder="Enter your email"
+                          type="username"
+                          placeholder="Enter your username"
                           {...field}
                           disabled={isLoading}
                         />
@@ -116,7 +134,7 @@ export default function Login() {
                     </FormItem>
                   )}
                 />
-                
+
                 <FormField
                   control={form.control}
                   name="password"
@@ -126,7 +144,7 @@ export default function Login() {
                       <FormControl>
                         <div className="relative">
                           <Input
-                            type={showPassword ? 'text' : 'password'}
+                            type={showPassword ? "text" : "password"}
                             placeholder="Enter your password"
                             {...field}
                             disabled={isLoading}
@@ -151,32 +169,25 @@ export default function Login() {
                     </FormItem>
                   )}
                 />
-                
-                <Button
-                  type="submit"
-                  className="w-full"
-                  disabled={isLoading}
-                >
+
+                <Button type="submit" className="w-full" disabled={isLoading}>
                   {isLoading ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                       Signing in...
                     </>
                   ) : (
-                    'Sign In'
+                    "Sign In"
                   )}
                 </Button>
               </form>
             </Form>
-            
+
             <div className="mt-6 text-center text-sm text-muted-foreground space-y-2">
               <p>
-                Don't have an account?{' '}
+                Don't have an account?{" "}
                 <Link to="/register">
-                  <Button
-                    variant="link"
-                    className="p-0 h-auto font-semibold"
-                  >
+                  <Button variant="link" className="p-0 h-auto font-semibold">
                     Sign up
                   </Button>
                 </Link>
@@ -184,10 +195,7 @@ export default function Login() {
               {import.meta.env.DEV && (
                 <p>
                   <Link to="/test-credentials">
-                    <Button
-                      variant="link"
-                      className="p-0 h-auto text-xs"
-                    >
+                    <Button variant="link" className="p-0 h-auto text-xs">
                       View Test Credentials
                     </Button>
                   </Link>

@@ -83,7 +83,7 @@ export function TicketCard({ ticket, className }: TicketCardProps) {
               </Badge>
             </div>
           </div>
-          <Link to={`/app/tickets/${ticket.id}`}>
+          <Link to={`/app/tickets/view/${ticket.id}`}>
             <Button 
               variant="ghost" 
               size="sm"

@@ -1,7 +1,8 @@
 export interface User {
   uid: string;
-  displayName: string;
+  name: string;
   email: string;
+  password: string;
   role: 'admin' | 'employee';
   employeeNo?: string;
   location?: string;

@@ -1,6 +1,6 @@
 import React from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
+import { useUser } from '@/contexts/UserContext';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -11,7 +11,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   children, 
   requireAuth = true 
 }) => {
-  const { user, loading } = useAuth();
+  const { user, loading } = useUser();
   const location = useLocation();
 
   if (loading) {
@@ -28,8 +28,9 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   }
 
   if (!requireAuth && user) {
-    // Redirect to dashboard if user is already authenticated
-    return <Navigate to="/app/dashboard" replace />;
+    // Redirect to role-based landing if user is already authenticated
+    const destination = user.role === 'employee' ? '/app/my-tickets' : '/app/dashboard';
+    return <Navigate to={destination} replace />;
   }
 
   return <>{children}</>;
