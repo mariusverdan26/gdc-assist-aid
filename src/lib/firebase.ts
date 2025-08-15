@@ -14,13 +14,16 @@ const firebaseConfig = {
   appId: import.meta.env.VITE_FIREBASE_APP_ID || 'demo-app-id'
 };
 
+
 // Initialize Firebase
 let app;
 let auth;
+let db;
 
 try {
   app = initializeApp(firebaseConfig);
   auth = getAuth(app);
+  db = getFirestore(app);
 } catch (error) {
   console.error('Firebase initialization error:', error);
   // Create a mock auth object for development
@@ -33,7 +36,7 @@ try {
   } as any;
 }
 
-export { auth };
+export { auth, db };
 
 export const signInUser = async (username: string, password: string) => {
   try {
@@ -61,7 +64,6 @@ export const signInUser = async (username: string, password: string) => {
     // You may want to omit the password from the returned user object
     const { password: _pw, ...userWithoutPassword } = userData;
 
-    console.log(`userData: ${JSON.stringify(userData,null,2)}`)
     return {
       user: {
         ...userWithoutPassword,

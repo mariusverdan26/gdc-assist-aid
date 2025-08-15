@@ -202,7 +202,7 @@ export default function TicketDetails() {
             <CardTitle>Ticket not found</CardTitle>
           </CardHeader>
           <CardContent>
-            <Link to="/app/tickets/pending">
+            <Link to="/app/tickets/all">
               <Button variant="outline"><ChevronLeft className="h-4 w-4 mr-2" /> Back</Button>
             </Link>
           </CardContent>
@@ -236,7 +236,7 @@ export default function TicketDetails() {
               </Button>
             </>
           )}
-          <Link to="/app/tickets/pending">
+          <Link to="/app/tickets/all">
             <Button variant="outline"><ChevronLeft className="h-4 w-4 mr-2" /> Back</Button>
           </Link>
         </div>

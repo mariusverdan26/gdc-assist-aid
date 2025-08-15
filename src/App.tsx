@@ -7,6 +7,7 @@ import { AppLayout } from "./components/layout/app-layout";
 import { ProtectedRoute } from "./components/auth/ProtectedRoute";
 import { UserProvider } from "./contexts/UserContext";
 import Dashboard from "./pages/admin/Dashboard";
+import UsersScreen from "./pages/admin/Users";
 import TicketsList from "./pages/admin/TicketsList";
 import NewTicket from "./pages/employee/NewTicket";
 import MyTickets from "./pages/employee/MyTickets";
@@ -56,10 +57,11 @@ const App = () => {
                 <Route path="dashboard" element={<Dashboard />} />
                 <Route path="tickets/:status" element={<TicketsList />} />
                 <Route path="tickets/view/:id" element={<TicketDetails />} />
-                <Route path="tickets" element={<Navigate to="/app/tickets/pending" replace />} />
+                <Route path="tickets" element={<Navigate to="/app/tickets/all" replace />} />
                 <Route path="new-ticket" element={<NewTicket />} />
                 <Route path="my-tickets" element={<MyTickets />} />
                 <Route path="reports" element={<Dashboard />} />
+                <Route path="users" element={<UsersScreen />} />
               </Route>
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />

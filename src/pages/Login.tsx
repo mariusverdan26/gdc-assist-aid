@@ -52,8 +52,6 @@ export default function Login() {
 
     try {
       const { user, error } = await signIn(data.username, data.password);
-      console.log(`user: ${user}`);
-      console.log(`error: ${error}`);
 
       if (error) {
         toast({
@@ -65,7 +63,6 @@ export default function Login() {
       }
 
       if (user !== null) {
-        console.log(`pasok`)
         toast({
           title: "Login Successful",
           description: "Welcome back!",

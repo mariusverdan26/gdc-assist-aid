@@ -21,24 +21,14 @@ const adminNavItems = [
     icon: LayoutDashboard,
   },
   {
-    title: "Pending Tickets",
-    href: "/app/tickets/pending",
+    title: "Tickets",
+    href: "/app/tickets/all",
     icon: Ticket,
   },
   {
-    title: "Ongoing Tickets", 
-    href: "/app/tickets/ongoing",
-    icon: Ticket,
-  },
-  {
-    title: "Resolved Tickets",
-    href: "/app/tickets/resolved", 
-    icon: Ticket,
-  },
-  {
-    title: "Reports",
-    href: "/app/reports",
-    icon: BarChart3,
+    title: "Users",
+    href: "/app/users",
+    icon: Users,
   },
 ];
 
@@ -58,7 +48,6 @@ const employeeNavItems = [
 export function Sidebar() {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const { user } = useUser();
-  console.log(`sidebarUser: ${JSON.stringify(user,null,2)}`)
   const location = useLocation();
   const userRole = user?.role || 'employee';
   const navItems = userRole === 'admin' ? adminNavItems : employeeNavItems;
@@ -107,7 +96,11 @@ export function Sidebar() {
       {/* Navigation */}
       <nav className="flex-1 p-2 space-y-1">
         {navItems.map((item) => {
-          const isActive = location.pathname === item.href;
+          // Special logic: Tickets nav is active for any /app/tickets/* path
+          const isTickets = item.href.startsWith('/app/tickets');
+          const isActive = isTickets
+            ? location.pathname.startsWith('/app/tickets')
+            : location.pathname === item.href;
           return (
             <Link
               key={item.href}

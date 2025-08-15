@@ -13,15 +13,48 @@ import { TicketCard } from "@/components/tickets/ticket-card";
 import { Badge } from "@/components/ui/badge";
 import { Search, Filter, Download, Plus, Eye } from "lucide-react";
 import { Ticket, TicketStatus } from "@/types";
+
 import app from "@/lib/firebase";
 import { getFirestore, collection, onSnapshot, Timestamp, QueryDocumentSnapshot, DocumentData } from "firebase/firestore";
 
+// Export filtered tickets to CSV
+function exportTicketsToCSV(filteredTickets: Ticket[]) {
+  if (filteredTickets.length === 0) return;
+  const headers = [
+    'Ticket No', 'Status', 'Category', 'Created By', 'Location', 'Assigned To', 'Created At', 'Details'
+  ];
+  const rows = filteredTickets.map(ticket => [
+    ticket.ticketNo,
+    ticket.status,
+    ticket.category,
+    ticket.createdBy.name,
+    ticket.createdBy.location || '',
+    ticket.assignedTo?.name || '',
+    ticket.createdAt.toLocaleString(),
+    ticket.details.replace(/\n/g, ' ')
+  ]);
+  const csvContent = [headers, ...rows]
+    .map(row => row.map(field => `"${String(field).replace(/"/g, '""')}"`).join(','))
+    .join('\n');
+  const blob = new Blob([csvContent], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'tickets.csv';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
 export default function TicketsList() {
-  const { status } = useParams<{ status: TicketStatus }>();
+  const { status } = useParams<{ status?: TicketStatus | 'all' }>();
   const [searchTerm, setSearchTerm] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [tickets, setTickets] = useState<Ticket[]>([]);
+
   const [loading, setLoading] = useState<boolean>(true);
+
 
   const mapDocToTicket = (doc: QueryDocumentSnapshot<DocumentData>): Ticket => {
     const data = doc.data() as any;
@@ -75,13 +108,16 @@ export default function TicketsList() {
 
   // Filter tickets based on status from URL params
   const filteredTickets = tickets.filter(ticket => {
-    const matchesStatus = status ? ticket.status === status : true;
+    // Only filter by status if status is 'pending', 'ongoing', or 'resolved'
+    const validStatuses = ['pending', 'ongoing', 'resolved'];
+    const matchesStatus = status && validStatuses.includes(status)
+      ? ticket.status === status
+      : true;
     const matchesSearch = searchTerm === "" || 
       ticket.ticketNo.toLowerCase().includes(searchTerm.toLowerCase()) ||
       ticket.details.toLowerCase().includes(searchTerm.toLowerCase()) ||
       ticket.createdBy.name.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesCategory = categoryFilter === "all" || ticket.category === categoryFilter;
-    
     return matchesStatus && matchesSearch && matchesCategory;
   });
 
@@ -98,7 +134,7 @@ export default function TicketsList() {
     }
   };
 
-  const getStatusColor = (status: TicketStatus) => {
+  const getStatusColor = (status: TicketStatus | 'all') => {
     switch (status) {
       case 'pending':
         return 'bg-warning-light text-warning border-warning/20';
@@ -106,10 +142,13 @@ export default function TicketsList() {
         return 'bg-primary-light text-primary border-primary/20';
       case 'resolved':
         return 'bg-success-light text-success border-success/20';
+      case 'all':
+        return 'bg-blue-100 text-blue-800 border-blue-200';
       default:
         return 'bg-muted text-muted-foreground border-border';
     }
   };
+
 
   return (
     <div className="space-y-6">
@@ -122,21 +161,23 @@ export default function TicketsList() {
           </p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" size="sm">
+          <Button variant="outline" size="sm" onClick={() => exportTicketsToCSV(filteredTickets)}>
             <Download className="h-4 w-4 mr-2" />
             Export CSV
           </Button>
-          <Link to="/app/new-ticket">
-            <Button size="sm">
-              <Plus className="h-4 w-4 mr-2" />
-              New Ticket
-            </Button>
-          </Link>
         </div>
       </div>
 
       {/* Status Tabs */}
       <div className="flex flex-wrap gap-2">
+        <Link to="/app/tickets/all">
+          <Badge
+            variant={(typeof status === 'string' && status === 'all') || !status ? 'default' : 'outline'}
+            className={(typeof status === 'string' && status === 'all') || !status ? getStatusColor('all') : ''}
+          >
+            All ({tickets.length})
+          </Badge>
+        </Link>
         <Link to="/app/tickets/pending">
           <Badge 
             variant={status === 'pending' ? 'default' : 'outline'}

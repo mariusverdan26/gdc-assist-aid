@@ -13,7 +13,6 @@ export default function AppLandingRedirect() {
     return <Navigate to="/login" replace />;
   }
 
-  console.log(`user.role: ${user.role}`)
   const destination = user.role === 'employee' ? '/app/my-tickets' : '/app/dashboard';
   return <Navigate to={destination} replace />;
 }
