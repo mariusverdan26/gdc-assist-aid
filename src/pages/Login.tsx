@@ -25,9 +25,11 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { useUser } from "@/contexts/UserContext";
 
+
 const loginSchema = z.object({
   username: z.string().min(3, "Username must be at least 3 characters"),
   password: z.string().min(6, "Password must be at least 6 characters"),
+  rememberMe: z.boolean().optional(),
 });
 
 type LoginFormData = z.infer<typeof loginSchema>;
@@ -44,15 +46,28 @@ export default function Login() {
     defaultValues: {
       username: "",
       password: "",
+      rememberMe: false,
     },
   });
 
+  // On mount, if rememberMe and user-session in localStorage, prefill username
+  React.useEffect(() => {
+    const savedUser = localStorage.getItem("user-session");
+    if (savedUser) {
+      try {
+        const user = JSON.parse(savedUser);
+        if (user && user.employeeNo) {
+          form.setValue("username", user.employeeNo);
+          form.setValue("rememberMe", true);
+        }
+      } catch {}
+    }
+  }, [form]);
+
   const onSubmit = async (data: LoginFormData) => {
     setIsLoading(true);
-
     try {
       const { user, error } = await signIn(data.username, data.password);
-
       if (error) {
         toast({
           title: "Login Failed",
@@ -61,13 +76,21 @@ export default function Login() {
         });
         return;
       }
-
       if (user !== null) {
+        // Save session based on rememberMe
+        if (data.rememberMe) {
+          localStorage.setItem("user-session", JSON.stringify(user));
+          sessionStorage.removeItem("user-session");
+        } else {
+          sessionStorage.setItem("user-session", JSON.stringify(user));
+          localStorage.removeItem("user-session");
+        }
         toast({
           title: "Login Successful",
           description: "Welcome back!",
         });
-        const destination = user.role === 'employee' ? '/app/my-tickets' : '/app/dashboard';
+        const destination =
+          user.role === "employee" ? "/app/my-tickets" : "/app/dashboard";
         navigate(destination);
       }
     } catch (error) {
@@ -87,22 +110,15 @@ export default function Login() {
         <Card className="shadow-lg border-0">
           <CardHeader className="space-y-1 text-center">
             <div className="mx-auto w-12 h-12 bg-primary rounded-lg flex items-center justify-center mb-4">
-              <svg
-                className="w-6 h-6 text-primary-foreground"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+              <div className="w-12 h-12 bg-sidebar-primary rounded-full flex items-center justify-center overflow-hidden">
+                <img
+                  src="/images/gdc-logo.jpeg"
+                  alt="GDC Logo"
+                  className="object-cover w-10 h-10 rounded-lg"
                 />
-              </svg>
+              </div>
             </div>
-            <CardTitle className="text-2xl font-bold">Welcome Back</CardTitle>
+            <CardTitle className="text-2xl font-bold">GDC - IT Ticketing System</CardTitle>
             <CardDescription>
               Sign in to your account to continue
             </CardDescription>
@@ -167,38 +183,30 @@ export default function Login() {
                   )}
                 />
 
-                <Button type="submit" className="w-full" disabled={isLoading}>
-                  {isLoading ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Signing in...
-                    </>
-                  ) : (
-                    "Sign In"
-                  )}
-                </Button>
+                <div className="flex flex-col space-y-4">
+                  <label className="flex items-center space-x-2 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={!!form.watch("rememberMe")}
+                      onChange={e => form.setValue("rememberMe", e.target.checked)}
+                      className="accent-primary"
+                      disabled={isLoading}
+                    />
+                    <span>Remember me</span>
+                  </label>
+                  <Button type="submit" className="" disabled={isLoading}>
+                    {isLoading ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Signing in...
+                      </>
+                    ) : (
+                      "Sign In"
+                    )}
+                  </Button>
+                </div>
               </form>
             </Form>
-
-            <div className="mt-6 text-center text-sm text-muted-foreground space-y-2">
-              <p>
-                Don't have an account?{" "}
-                <Link to="/register">
-                  <Button variant="link" className="p-0 h-auto font-semibold">
-                    Sign up
-                  </Button>
-                </Link>
-              </p>
-              {import.meta.env.DEV && (
-                <p>
-                  <Link to="/test-credentials">
-                    <Button variant="link" className="p-0 h-auto text-xs">
-                      View Test Credentials
-                    </Button>
-                  </Link>
-                </p>
-              )}
-            </div>
           </CardContent>
         </Card>
       </div>

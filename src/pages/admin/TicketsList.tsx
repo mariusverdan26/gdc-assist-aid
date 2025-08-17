@@ -10,12 +10,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { TicketCard } from "@/components/tickets/ticket-card";
+import { Checkbox } from "@/components/ui/checkbox";
+import { getFirestore, collection, onSnapshot, Timestamp, QueryDocumentSnapshot, DocumentData, deleteDoc, doc as firestoreDoc } from "firebase/firestore";
 import { Badge } from "@/components/ui/badge";
 import { Search, Filter, Download, Plus, Eye } from "lucide-react";
 import { Ticket, TicketStatus } from "@/types";
 
 import app from "@/lib/firebase";
-import { getFirestore, collection, onSnapshot, Timestamp, QueryDocumentSnapshot, DocumentData } from "firebase/firestore";
 
 // Export filtered tickets to CSV
 function exportTicketsToCSV(filteredTickets: Ticket[]) {
@@ -52,9 +53,8 @@ export default function TicketsList() {
   const [searchTerm, setSearchTerm] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [tickets, setTickets] = useState<Ticket[]>([]);
-
   const [loading, setLoading] = useState<boolean>(true);
-
+  const [selectedTickets, setSelectedTickets] = useState<string[]>([]);
 
   const mapDocToTicket = (doc: QueryDocumentSnapshot<DocumentData>): Ticket => {
     const data = doc.data() as any;
@@ -120,6 +120,32 @@ export default function TicketsList() {
     const matchesCategory = categoryFilter === "all" || ticket.category === categoryFilter;
     return matchesStatus && matchesSearch && matchesCategory;
   });
+
+  // Batch select logic (must be after filteredTickets is defined)
+  const allPendingSelected = filteredTickets.length > 0 && filteredTickets.every(t => t.status === 'pending' && selectedTickets.includes(t.id));
+  const isPendingView = status === 'pending';
+  const handleSelectAll = () => {
+    if (allPendingSelected) {
+      setSelectedTickets(selectedTickets.filter(id => !filteredTickets.some(t => t.id === id && t.status === 'pending')));
+    } else {
+      setSelectedTickets([
+        ...selectedTickets,
+        ...filteredTickets.filter(t => t.status === 'pending' && !selectedTickets.includes(t.id)).map(t => t.id)
+      ]);
+    }
+  };
+  const handleSelectTicket = (id: string) => {
+    setSelectedTickets(selectedTickets =>
+      selectedTickets.includes(id)
+        ? selectedTickets.filter(tid => tid !== id)
+        : [...selectedTickets, id]
+    );
+  };
+  const handleBatchDelete = async () => {
+    const db = getFirestore(app);
+    await Promise.all(selectedTickets.map(id => deleteDoc(firestoreDoc(db, 'tickets', id))));
+    setSelectedTickets([]);
+  };
 
   const getPageTitle = () => {
     switch (status) {
@@ -237,13 +263,33 @@ export default function TicketsList() {
         </p>
       </div>
 
-      {/* Tickets Grid */}
+      {/* Batch actions and Tickets Grid */}
       {filteredTickets.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-          {filteredTickets.map((ticket) => (
-            <TicketCard key={ticket.id} ticket={ticket} />
-          ))}
-        </div>
+        <>
+          {isPendingView && (
+            <div className="flex items-center mb-2 gap-4">
+              <Checkbox checked={allPendingSelected} onCheckedChange={handleSelectAll} id="select-all-tickets" />
+              <label htmlFor="select-all-tickets" className="text-sm select-none cursor-pointer">Select All</label>
+              <Button variant="destructive" size="sm" disabled={selectedTickets.length === 0} onClick={handleBatchDelete}>
+                Delete Selected ({selectedTickets.length})
+              </Button>
+            </div>
+          )}
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+            {filteredTickets.map((ticket) => (
+              <div key={ticket.id} className="relative">
+                {isPendingView && (
+                  <Checkbox
+                    checked={selectedTickets.includes(ticket.id)}
+                    onCheckedChange={() => handleSelectTicket(ticket.id)}
+                    className="absolute top-2 left-2 z-10 bg-white border border-gray-300 shadow"
+                  />
+                )}
+                <TicketCard ticket={ticket} className={isPendingView ? 'pl-8' : ''} />
+              </div>
+            ))}
+          </div>
+        </>
       ) : (
         <div className="text-center py-12">
           <Eye className="h-12 w-12 mx-auto text-muted-foreground mb-4" />

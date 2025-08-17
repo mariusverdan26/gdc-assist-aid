@@ -51,6 +51,6 @@ If you plan to use Firestore or Storage, make sure to set up appropriate securit
 ## Testing
 
 1. Start your development server: `npm run dev`
-2. Navigate to `/login`
+2. Navigate to `/`
 3. Use the test credentials you created in Firebase Console
 4. You should be redirected to the dashboard upon successful login

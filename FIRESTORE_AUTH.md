@@ -93,7 +93,7 @@ const ProtectedRoute = ({ children }) => {
   const { user, loading } = useUser();
   
   if (loading) return <LoadingSpinner />;
-  if (!user) return <Navigate to="/login" />;
+  if (!user) return <Navigate to="/" />;
   
   return children;
 };
@@ -108,7 +108,7 @@ const Header = () => {
   
   const handleLogout = async () => {
     await signOut();
-    navigate('/login');
+    navigate('/');
   };
   
   return (

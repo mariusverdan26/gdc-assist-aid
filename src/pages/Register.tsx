@@ -56,7 +56,7 @@ export default function Register() {
           title: 'Registration Successful',
           description: 'Account created successfully! You can now sign in.',
         });
-        navigate('/login');
+        navigate('/');
       }
     } catch (error) {
       toast({
@@ -207,7 +207,7 @@ export default function Register() {
             <div className="mt-6 text-center text-sm text-muted-foreground">
               <p>
                 Already have an account?{' '}
-                <Link to="/login">
+                <Link to="/">
                   <Button
                     variant="link"
                     className="p-0 h-auto font-semibold"

@@ -23,9 +23,7 @@ import { TestCredentials } from "./components/auth/TestCredentials";
 
 const queryClient = new QueryClient();
 
-const App = () => {
-  console.log('App component rendering');
-  
+const App = () => {  
   return (
     <QueryClientProvider client={queryClient}>
       <UserProvider>
@@ -37,8 +35,8 @@ const App = () => {
               <Route path="/test" element={<Test />} />
               <Route path="/test-auth" element={<TestAuth />} />
               <Route path="/test-credentials" element={<TestCredentials />} />
-              <Route path="/" element={<Index />} />
-              <Route path="/login" element={
+
+              <Route path="/" element={
                 <ProtectedRoute requireAuth={false}>
                   <Login />
                 </ProtectedRoute>

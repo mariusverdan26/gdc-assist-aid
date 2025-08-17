@@ -62,7 +62,12 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
   useEffect(() => {
     const checkExistingSession = async () => {
       try {
-        const savedUser = localStorage.getItem('user-session');
+        let savedUser = localStorage.getItem('user-session');
+        let storageType = 'localStorage';
+        if (!savedUser) {
+          savedUser = sessionStorage.getItem('user-session');
+          storageType = 'sessionStorage';
+        }
         if (savedUser) {
           const userData = JSON.parse(savedUser);
           setUser(userData);
@@ -70,11 +75,11 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
       } catch (error) {
         console.error('Error checking existing session:', error);
         localStorage.removeItem('user-session');
+        sessionStorage.removeItem('user-session');
       } finally {
         setLoading(false);
       }
     };
-
     checkExistingSession();
   }, []);
 
@@ -117,8 +122,7 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
         updatedAt: new Date(),
       };
 
-      // Save to localStorage for session persistence
-      localStorage.setItem('user-session', JSON.stringify(user));
+      // Do not save to storage here; let Login.tsx handle it based on rememberMe
       setUser(user);
 
       return { user, error: null };
@@ -132,6 +136,7 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
   const signOut = useCallback(async () => {
     try {
       localStorage.removeItem('user-session');
+      sessionStorage.removeItem('user-session');
       setUser(null);
     } catch (error) {
       console.error('Sign out error:', error);

@@ -39,7 +39,7 @@ const Index = () => {
                 </Button>
               </Link>
             ) : (
-              <Link to="/login">
+              <Link to="/">
                 <Button className="gdc-gradient">
                   Sign In
                   <ArrowRight className="h-4 w-4 ml-2" />
@@ -80,13 +80,13 @@ const Index = () => {
                 </>
               ) : (
                 <>
-                  <Link to="/login">
+                  <Link to="/">
                     <Button size="lg" className="gdc-gradient">
                       <Ticket className="h-5 w-5 mr-2" />
                       Get Started
                     </Button>
                   </Link>
-                  <Link to="/login">
+                  <Link to="/">
                     <Button size="lg" variant="outline">
                       <BarChart3 className="h-5 w-5 mr-2" />
                       Sign In

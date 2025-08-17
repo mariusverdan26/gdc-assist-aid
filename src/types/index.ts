@@ -30,6 +30,7 @@ export interface Ticket {
   createdAt: Date;
   acknowledgedAt?: Date;
   resolvedAt?: Date;
+  rating?: number | null;
 }
 
 export interface TicketEvent {

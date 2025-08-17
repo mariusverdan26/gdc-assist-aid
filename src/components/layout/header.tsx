@@ -34,7 +34,7 @@ export function Header() {
         title: 'Logged Out',
         description: 'You have been successfully logged out.',
       });
-      navigate('/login');
+      navigate('/');
     } catch (error) {
       toast({
         title: 'Logout Failed',
